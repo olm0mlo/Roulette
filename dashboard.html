@@ -375,8 +375,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadOrCreateGame() {
-  const { data } = await db.from('games').select('*').order('created_at', { ascending: false }).limit(1).single();
-  if (data && data.status !== 'finished') {
+  const { data, error } = await db.from('games').select('*').order('created_at', { ascending: false }).limit(1).single();
+  if (!error && data && data.status !== 'finished') {
     currentGameId = data.id;
     gameStatus = data.status;
     updateStatusBadge(data.status);
@@ -444,16 +444,12 @@ function showResult(n) {
 }
 
 function renderBetsFeed(winningNumber = null) {
-  const feed  = document.getElementById('bets-feed');
-  const empty = document.getElementById('feed-empty');
+  const feed = document.getElementById('bets-feed');
 
   if (allBets.length === 0) {
-    feed.innerHTML = '';
-    empty.style.display = 'block';
-    feed.appendChild(empty);
+    feed.innerHTML = '<div class="feed-empty" id="feed-empty">⏳ In attesa delle puntate…</div>';
     return;
   }
-  empty.style.display = 'none';
   feed.innerHTML = '';
 
   // Group by player
