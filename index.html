@@ -598,6 +598,12 @@ function updateBudgetDisplay() {
   document.getElementById('header-budget').textContent = centsToEuro(budget);
 }
 
+// Mostra il budget residuo dopo le puntate selezionate (ma non ancora inviate)
+function updateBudgetPreview() {
+  const spent = [...bets.values()].reduce((s, b) => s + b.amount, 0);
+  document.getElementById('header-budget').textContent = centsToEuro(budget - spent);
+}
+
 // Aggiunge 1€ alla puntata (cumulativo)
 function addBet(el) {
   if (betsSent) return;
@@ -617,6 +623,7 @@ function addBet(el) {
 
   updateCellBadge(el, bets.get(key).amount);
   renderBets();
+  updateBudgetPreview();
 }
 
 function updateCellBadge(el, amount) {
@@ -642,6 +649,7 @@ function decreaseBet(key) {
     updateCellBadge(bet.element, bet.amount);
   }
   renderBets();
+  updateBudgetPreview();
 }
 
 function clearBets() {
@@ -652,6 +660,7 @@ function clearBets() {
   });
   bets.clear();
   renderBets();
+  updateBudgetPreview();
 }
 
 function renderBets() {
@@ -754,28 +763,32 @@ async function handleGameUpdate(game) {
   }
 
   if (game.status === 'finished' && game.winning_number !== null) {
-    const n = game.winning_number;
-    const banner = document.getElementById('result-banner');
-
+    // Aggiorna budget senza mostrare ancora il risultato
     const { data } = await db.from('players').select('budget').eq('id', playerId).single();
     if (data) { budget = data.budget; updateBudgetDisplay(); }
-
-    const won = [...bets.values()].some(b => betWins(b.type, b.value, n));
-    banner.style.display = 'block';
-    banner.className = 'result-banner ' + (won ? 'win' : (bets.size > 0 ? 'lose' : 'neutral'));
-
-    const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
-    banner.innerHTML = `
-      <div class="result-number">${color} ${n}</div>
-      <div class="result-label">Numero vincente</div>
-      <div class="result-outcome">${won ? '🎉 Hai vinto!' : (bets.size > 0 ? '😔 Non hai vinto questa volta' : '')}</div>`;
-
-    document.getElementById('waiting-banner').style.display = 'none';
-    setTimeout(() => resetForNextRound(), 4000);
+    // Salva il numero vincente per mostrarlo quando il relatore avvia il nuovo round
+    window._lastWinningNumber = game.winning_number;
+    document.getElementById('waiting-banner').textContent = '✅ Girata completata! Attendi il prossimo round…';
   }
 
   if (game.status === 'waiting') {
-    resetForNextRound();
+    // Ora mostra il risultato, dopo che la ruota è già stata vista sulla dashboard
+    const n = window._lastWinningNumber;
+    if (n !== undefined && n !== null) {
+      const banner = document.getElementById('result-banner');
+      const won = [...bets.values()].some(b => betWins(b.type, b.value, n));
+      banner.style.display = 'block';
+      banner.className = 'result-banner ' + (won ? 'win' : (bets.size > 0 ? 'lose' : 'neutral'));
+      const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
+      banner.innerHTML = `
+        <div class="result-number">${color} ${n}</div>
+        <div class="result-label">Numero vincente</div>
+        <div class="result-outcome">${won ? '🎉 Hai vinto!' : (bets.size > 0 ? '😔 Non hai vinto questa volta' : '')}</div>`;
+      document.getElementById('waiting-banner').style.display = 'none';
+      setTimeout(() => resetForNextRound(), 5000);
+    } else {
+      resetForNextRound();
+    }
   }
 }
 
