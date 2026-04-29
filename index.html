@@ -230,15 +230,15 @@
   }
 
   .bet-summary {
-    margin: 0 1rem;
+    margin: 0 0.5rem;
     background: rgba(0,0,0,0.2);
     border-radius: 10px;
     border: 1px solid var(--border);
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .bet-summary .bets-count { color: var(--text-muted); }
@@ -486,12 +486,13 @@
   <div id="waiting-banner">⏳ Puntate inviate — attendi che il relatore faccia girare la ruota!</div>
   <div id="result-banner"></div>
 
-  <div class="bet-summary" id="bet-summary" style="display:none">
-    <span class="bets-count" id="bets-count">0 puntate</span>
-    <span class="bets-total" id="bets-total">€0,00 puntati</span>
-    <button class="btn-clear" onclick="clearBets(true)">Cancella tutto</button>
+  <div class="bet-summary" id="bet-summary">
+    <span class="bets-count" id="bets-count">Nessuna puntata</span>
+    <span class="bets-total" id="bets-total"></span>
+    <button class="btn-clear" id="btn-clear" onclick="clearBets(true)" style="visibility:hidden;">Cancella</button>
   </div>
 
+  <div class="section-title" style="padding-top:0.5rem;padding-bottom:0.4rem;">Tocca per puntare</div>
   <div class="table-wrapper">
     <div class="roulette-table">
       <div class="zero-row">
@@ -516,8 +517,7 @@
     </div>
   </div>
 
-  <div class="section-title" id="bets-section-title" style="display:none">Le tue puntate</div>
-  <div class="bets-list" id="bets-list"></div>
+
 
   <div class="send-wrapper" id="send-wrapper">
     <button class="btn-send" id="btn-send" disabled onclick="sendBets()">Invia puntate</button>
@@ -672,39 +672,22 @@ function clearBets(restoreBudget = false) {
 }
 
 function renderBets() {
-  const list = document.getElementById('bets-list');
-  const summary = document.getElementById('bet-summary');
-  const title = document.getElementById('bets-section-title');
   const sendBtn = document.getElementById('btn-send');
-
-  list.innerHTML = '';
+  const clearBtn = document.getElementById('btn-clear');
 
   if (bets.size === 0) {
-    summary.style.display = 'none';
-    title.style.display = 'none';
+    document.getElementById('bets-count').textContent = 'Nessuna puntata';
+    document.getElementById('bets-total').textContent = '';
+    clearBtn.style.visibility = 'hidden';
     sendBtn.disabled = true;
     return;
   }
 
-  summary.style.display = 'flex';
-  title.style.display = 'block';
-  sendBtn.disabled = false;
-
   const total = [...bets.values()].reduce((s, b) => s + b.amount, 0);
   document.getElementById('bets-count').textContent = bets.size + (bets.size === 1 ? ' puntata' : ' puntate');
-  document.getElementById('bets-total').textContent = centsToEuro(total) + ' puntati';
-
-  bets.forEach((bet, key) => {
-    const chip = document.createElement('div');
-    chip.className = 'bet-chip';
-    chip.innerHTML = `
-      <span class="bet-label">${betLabel(bet.type, bet.value)}</span>
-      <div class="bet-controls">
-        <span class="bet-val">${centsToEuro(bet.amount)}</span>
-        <button class="btn-minus" onclick="decreaseBet('${key}')">−</button>
-      </div>`;
-    list.appendChild(chip);
-  });
+  document.getElementById('bets-total').textContent = centsToEuro(total);
+  clearBtn.style.visibility = 'visible';
+  sendBtn.disabled = false;
 }
 
 function betLabel(type, value) {
