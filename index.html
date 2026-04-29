@@ -185,19 +185,49 @@
     display: none;
   }
 
-  #result-banner.win { background: rgba(26,107,58,0.4); border: 1px solid rgba(26,107,58,0.8); }
-  #result-banner.lose { background: rgba(192,57,43,0.3); border: 1px solid rgba(192,57,43,0.6); }
-  #result-banner.neutral { background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
-  #result-banner .result-number { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 700; }
-  #result-banner .result-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
-  #result-banner .result-outcome { font-size: 1.1rem; font-weight: 500; margin-top: 0.75rem; }
-  #result-banner .result-budget { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
-  #result-banner .report-list { margin-top: 0.75rem; width: 100%; display: flex; flex-direction: column; gap: 4px; }
-  #result-banner .report-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 8px; background: rgba(0,0,0,0.15); border-radius: 6px; }
-  #result-banner .report-label { color: var(--text-muted); }
+  /* Fullscreen report overlay */
+  #result-banner {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    overflow-y: auto;
+  }
+
+  #result-banner.win     { background: #0a2e16; }
+  #result-banner.lose    { background: #1a0a0a; }
+  #result-banner.neutral { background: var(--green-dark); }
+
+  #result-banner .result-number { font-family: 'Playfair Display', serif; font-size: 4rem; font-weight: 700; line-height: 1; }
+  #result-banner .result-label  { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; }
+  #result-banner .result-outcome { font-size: 1.4rem; font-weight: 500; margin-top: 1rem; }
+  #result-banner .result-budget  { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+  #result-banner .report-list { margin-top: 1.5rem; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 6px; }
+  #result-banner .report-row  { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.06); border-radius: 8px; }
+  #result-banner .report-label  { color: var(--text-muted); }
   #result-banner .report-result { font-weight: 500; }
-  #result-banner .report-result.win { color: #3ecf5e; }
+  #result-banner .report-result.win  { color: #3ecf5e; }
   #result-banner .report-result.lose { color: #ff6b5b; }
+
+  #result-banner .btn-close-report {
+    margin-top: 2rem;
+    background: var(--gold);
+    color: var(--black);
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.85rem 2.5rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
 
   .bet-summary {
     margin: 0 1rem;
@@ -500,6 +530,8 @@
 <div id="toast"></div>
 
 <script>
+const NOMI_LIST = ["Aiden","Liam","Noah","Mason","Logan","Ethan","Lucas","Oliver","Elijah","Jameson","Carter","Owen","Wyatt","Luke","Caleb","Hunter","Connor","Isaac","Julian","Asher","Leo","Ezra","Hudson","Grayson","Sebastian","Jack","Levi","Mateo","Elias","Adrian","Nolan","Easton","Colton","Miles","Roman","Axel","Damian","Bryson","Sawyer","Kai","Theo","Rowan","Jasper","Felix","Arlo","Hugo","Otto","Dante","Emil","Kasper","Tobias","Soren","Magnus","Leif","Anders","Bjorn","Niels","Lars","Henrik","Mikkel","Jannik","Rasmus","Stellan","Alvar","Eero","Pekka","Jari","Mikko","Tuomas","Oskari","Joonas","Sami","Teemu","Ville","Juhani","Antti","Jukka","Tapio","Veikko","Raimo","Erkki","Kalevi","Ilkka","Paavo","Seppo","Heikki","Jorma","Aapo","Kalle","Onni","Eetu","Lauri","Jere","Jani","Petteri","Sakari","Timo","Harri","Risto","Pentti","Yrjo","Zoltan","Bela","Laszlo","Istvan","Gabor","Attila","Ferenc","Sandor","Miklos","Tamas","Csaba","Endre","Imre","Kalman","Arpad","Denes","Gyula","Jozsef","Tibor","Zsolt","Amara","Zara","Layla","Noor","Amina","Fatima","Yasmin","Samira","Leila","Salma","Hana","Rania","Dalia","Farah","Laila","Malika","Soraya","Karima","Nadine","Rasha","Maha","Dina","Sahar","Iman","Aaliyah","Halima","Zainab","Sumaya","Khadija","Basma","Huda","Najwa","Asma","Rabia","Sanaa","Wafa","Amal","Dalal","Fadwa","Ghada","Hiba","Jamila","Kawthar","Lubna","Mona","Nawal","Rima","Sawsan","Tahira","Widad","Yusra","Zubaida","Sven","Erik","Johan","Mikael","Per","Ola","Ulf","Kjell","Goran","Lennart","Rune","Bo","Tor","Alf","Bengt","Stig","Hakan","Ingemar","Ove","Rolf","Arne","Egil","Odd","Knut","Tord","Vidar","Halvar","Eivind","Roar","Trygve","Hjalmar","Sigurd","Torsten","Yngve","Viggo","Ebbe","Folke","Ivar","Sune","Tage","Orvar","Birger","Holger","Eskil","Valdemar","Harald","Einar","Gunnar","Helge","Leifur","Freya","Astrid","Ingrid","Sigrid","Liv","Kari","Ragnhild","Solveig","Tove","Unni","Gro","Marit","Runa","Signy","Thora","Ylva","Elin","Annika","Linnea","Kerstin","Maj","Ulla","Barbro","Gunilla","Britt","Margareta","Lena","Anneli","Sonja","Tilda","Ebba","Maja","Alva","Svea","Hedda","Ronja","Tuva","Meja","Idun","Lovisa","Saga","Moa","Vilma","Juni","Lykke","Nanna","Silje","Frida","Hillevi","Jamal","Malik","Tariq","Rashid","Omar","Hassan","Karim","Bilal","Nadir","Farid","Hamza","Youssef","Khalid","Samir","Anwar","Imran","Zayd","Rami","Adil","Fares","Hisham","Munir","Nabil","Qasim","Saeed","Talal","Walid","Zahir","Amin","Bashir","Fadi","Ghassan","Iyad","Jaber","Kamil","Luay","Mazen","Nasser","Qadir","Raed","Saif","Tamer","Wael","Ziad","Aiko","Yuki","Sora","Haru","Mei","Rin","Akari","Sakura","Hikari","Nozomi","Kana","Yuna","Riko","Nanami","Misaki","Ayaka","Chihiro","Eri","Fumika","Haruka","Kaori","Kiko","Miki","Natsumi","Rina","Sayaka","Tomomi","Yoko","Aina","Emiko","Fuyumi","Hoshiko","Izumi","Junko","Keiko","Kumiko","Mariko","Noriko","Reiko","Sachiko","Taeko","Wakana","Yachiyo","Yoshiko","Kenji","Hiroshi","Takumi","Daichi","Kaito","Ren","Yuto","Satoshi","Minato","Jin","Taro","Isamu","Ryo","Kenta","Sho","Daisuke","Hikaru","Naoki","Koji","Shinji","Masato","Haruto","Kazuki","Ryota","Shota","Yuji","Tetsuya","Akio","Noboru","Osamu","Takashi","Yasuo","Ichiro","Jiro","Saburo","Hideo","Ken","Makoto","Riku","Souta","Taiga","Esme","Maeve","Niamh","Aoife","Siobhan","Caoimhe","Orla","Brigid","Deirdre","Eileen","Moira","Colleen","Imogen","Poppy","Tamsin","Blythe","Juno","Elspeth","Morag","Ailsa","Shona","Fenella","Iona","Kenna","Lorna","Mairi","Rhona","Skye","Saoirse","Una","Yseult","Zinnia"];
+
 const SUPABASE_URL = 'https://jzvvubfqgkuhvkzidlpd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6dnZ1YmZxZ2t1aHZremlkbHBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzI1NTksImV4cCI6MjA5Mjk0ODU1OX0.MRF1OIyDKAUIG-DUpEOftvqe1IAkKPFlnnLm0H7dk4Q';
 const { createClient } = supabase;
@@ -744,51 +776,55 @@ async function handleGameUpdate(game) {
   }
 
   if (game.status === 'finished' && game.winning_number !== null) {
-    const n = game.winning_number;
-
-    // Aggiorna budget dal DB (ufficiale)
-    const { data } = await db.from('players').select('budget').eq('id', playerId).single();
-    if (data) { budget = data.budget; updateBudgetDisplay(); }
-
-    // Usa sentBets (snapshot al momento dell'invio) — bets potrebbe essere vuoto dopo refresh
-    const myBets = sentBets.length > 0 ? sentBets : [...bets.values()].map(b => ({ type: b.type, value: b.value, amount: b.amount }));
-    const won = myBets.some(b => betWins(b.type, b.value, n));
-
-    // Report puntate
-    let reportRows = '';
-    myBets.forEach(b => {
-      const w = betWins(b.type, b.value, n);
-      const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
-      const gain = w ? b.amount * mult : -b.amount;
-      reportRows += `<div class="report-row">
-        <span class="report-label">${betLabel(b.type, b.value)}</span>
-        <span class="report-result ${w ? 'win' : 'lose'}">${w ? '+' + centsToEuro(gain) : centsToEuro(gain)}</span>
-      </div>`;
-    });
-
-    const totalDelta = myBets.reduce((s, b) => {
-      const w = betWins(b.type, b.value, n);
-      const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
-      return s + (w ? b.amount * mult : -b.amount);
-    }, 0);
-
-    const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
-    const banner = document.getElementById('result-banner');
-    banner.style.display = 'block';
-    banner.className = 'result-banner ' + (won ? 'win' : (myBets.length > 0 ? 'lose' : 'neutral'));
-    banner.innerHTML = `
-      <div class="result-number">${color} ${n}</div>
-      <div class="result-label">Numero vincente</div>
-      ${reportRows ? `<div class="report-list">${reportRows}</div>` : ''}
-      ${myBets.length > 0 ? `<div class="result-outcome">${totalDelta >= 0 ? '🎉 +' + centsToEuro(totalDelta) : '😔 ' + centsToEuro(totalDelta)}</div>` : ''}
-      <div class="result-budget">Budget: <strong>${centsToEuro(budget)}</strong></div>`;
-
-    document.getElementById('waiting-banner').style.display = 'none';
-    setTimeout(() => resetForNextRound(), 6000);
+    // Salva il numero — il report verrà mostrato quando arriva 'waiting'
+    // (cioè dopo che la ruota è scomparsa dalla dashboard)
+    window._pendingResult = game.winning_number;
+    document.getElementById('waiting-banner').textContent = '🎡 La ruota sta girando…';
   }
 
   if (game.status === 'waiting') {
-    resetForNextRound();
+    const n = window._pendingResult;
+    if (n !== undefined && n !== null) {
+      // Aggiorna budget dal DB
+      const { data } = await db.from('players').select('budget').eq('id', playerId).single();
+      if (data) { budget = data.budget; updateBudgetDisplay(); }
+
+      const myBets = sentBets.length > 0 ? sentBets : [...bets.values()].map(b => ({ type: b.type, value: b.value, amount: b.amount }));
+      const won = myBets.some(b => betWins(b.type, b.value, n));
+
+      let reportRows = '';
+      myBets.forEach(b => {
+        const w = betWins(b.type, b.value, n);
+        const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
+        const gain = w ? b.amount * mult : -b.amount;
+        reportRows += `<div class="report-row">
+          <span class="report-label">${betLabel(b.type, b.value)}</span>
+          <span class="report-result ${w ? 'win' : 'lose'}">${w ? '+' + centsToEuro(gain) : centsToEuro(gain)}</span>
+        </div>`;
+      });
+
+      const totalDelta = myBets.reduce((s, b) => {
+        const w = betWins(b.type, b.value, n);
+        const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
+        return s + (w ? b.amount * mult : -b.amount);
+      }, 0);
+
+      const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
+      const banner = document.getElementById('result-banner');
+      banner.className = won ? 'win' : (myBets.length > 0 ? 'lose' : 'neutral');
+      banner.innerHTML = `
+        <div class="result-number">${color} ${n}</div>
+        <div class="result-label">Numero vincente</div>
+        ${reportRows ? `<div class="report-list">${reportRows}</div>` : ''}
+        ${myBets.length > 0 ? `<div class="result-outcome">${totalDelta >= 0 ? '🎉 +' + centsToEuro(totalDelta) : '😔 ' + centsToEuro(totalDelta)}</div>` : ''}
+        <div class="result-budget">Budget: <strong>${centsToEuro(budget)}</strong></div>
+        <button class="btn-close-report" onclick="closeReport()">Chiudi</button>`;
+      banner.style.display = 'flex';
+      document.getElementById('waiting-banner').style.display = 'none';
+      window._pendingResult = null;
+    } else {
+      resetForNextRound();
+    }
   }
 }
 
@@ -802,6 +838,11 @@ function betWins(type, value, n) {
     return d === 1 ? n <= 12 : d === 2 ? n <= 24 : n <= 36;
   }
   return false;
+}
+
+function closeReport() {
+  document.getElementById('result-banner').style.display = 'none';
+  resetForNextRound();
 }
 
 function resetForNextRound() {
@@ -845,11 +886,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     localStorage.removeItem('roulette_nickname');
   }
 
-  // 2. New player — fetch names list and pick an available one
+  // 2. New player — pick an available name from the built-in list
   setStatus('Assegnazione nome…');
   try {
-    const res = await fetch('/Roulette/nomi.json');
-    const names = await res.json();
+    const names = NOMI_LIST.slice(); // copia dell'array definito sotto
 
     // Shuffle names for randomness
     for (let i = names.length - 1; i > 0; i--) {

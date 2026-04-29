@@ -745,12 +745,15 @@ async function startSpin() {
 
       setTimeout(() => {
         overlay.classList.add('fading');
-        setTimeout(() => {
+        setTimeout(async () => {
           cancelAnimationFrame(rafId);
           overlay.classList.remove('active', 'fading');
           overlay.style.opacity = '';
           spinning = false;
           spinNumber.classList.remove('visible');
+          // Automatically trigger new round — this sets status='waiting'
+          // which tells smartphones to show the report
+          await newRound();
         }, 800);
       }, 5000);
 
