@@ -85,8 +85,9 @@
 
   /* ── CHART ── */
   .chart-area { flex:1; padding:1rem 1.5rem; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
-  .chart-title { font-size:0.68rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:0.75rem; flex-shrink:0; }
-  .chart-wrap { flex:1; position:relative; min-height:0; }
+  .chart-title { font-size:0.68rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:0.5rem; flex-shrink:0; }
+  .chart-wrap { flex:1; min-height:0; position:relative; }
+  .chart-wrap canvas { position:absolute; inset:0; }
 
   .controls-bar {
     background: var(--surface);
@@ -856,7 +857,7 @@ function renderChart(winningNumber) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 700, easing: 'easeInOutQuart' },
+      animation: false,
       plugins: {
         legend: { display: false },
         tooltip: {
