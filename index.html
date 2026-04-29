@@ -605,11 +605,7 @@ function updateBudgetDisplay() {
   document.getElementById('header-budget').textContent = centsToEuro(budget);
 }
 
-// Mostra il budget residuo dopo le puntate selezionate (ma non ancora inviate)
-function updateBudgetPreview() {
-  const spent = [...bets.values()].reduce((s, b) => s + b.amount, 0);
-  document.getElementById('header-budget').textContent = centsToEuro(budget - spent);
-}
+
 
 // Aggiunge 1€ alla puntata (cumulativo)
 function addBet(el) {
@@ -618,8 +614,7 @@ function addBet(el) {
   const value = el.dataset.value;
   const key = betKey(type, value);
 
-  const totalSpent = [...bets.values()].reduce((s, b) => s + b.amount, 0);
-  if (totalSpent + 100 > budget) { showToast('Budget esaurito!', true); return; }
+  if (budget < 100) { showToast('Budget esaurito!', true); return; }
 
   if (bets.has(key)) {
     bets.get(key).amount += 100;
@@ -628,9 +623,10 @@ function addBet(el) {
     el.classList.add('selected');
   }
 
+  budget -= 100; // scala subito dal budget visibile
+  updateBudgetDisplay();
   updateCellBadge(el, bets.get(key).amount);
   renderBets();
-  updateBudgetPreview();
 }
 
 function updateCellBadge(el, amount) {
@@ -647,6 +643,7 @@ function decreaseBet(key) {
   const bet = bets.get(key);
   if (!bet) return;
   bet.amount -= 100;
+  budget += 100; // restituisce subito al budget visibile
   if (bet.amount <= 0) {
     bet.element.classList.remove('selected');
     const badge = bet.element.querySelector('.amount-badge');
@@ -655,19 +652,22 @@ function decreaseBet(key) {
   } else {
     updateCellBadge(bet.element, bet.amount);
   }
+  updateBudgetDisplay();
   renderBets();
-  updateBudgetPreview();
 }
 
 function clearBets() {
+  bets.forEach(bet => {
+    budget += bet.amount; // restituisce tutto
+  });
   bets.forEach(bet => {
     bet.element.classList.remove('selected');
     const badge = bet.element.querySelector('.amount-badge');
     if (badge) badge.remove();
   });
   bets.clear();
+  updateBudgetDisplay();
   renderBets();
-  updateBudgetPreview();
 }
 
 function renderBets() {
@@ -740,7 +740,6 @@ async function sendBets() {
   setCookie('roulette_sent_' + playerId, 'true', 4);
 
   betsSent = true;
-  updateBudgetDisplay(); // ripristina il budget reale, senza la preview delle puntate
   document.getElementById('send-wrapper').style.display = 'none';
   document.getElementById('sent-message').style.display = 'block';
   document.getElementById('waiting-banner').style.display = 'block';
@@ -771,62 +770,50 @@ async function handleGameUpdate(game) {
   }
 
   if (game.status === 'finished' && game.winning_number !== null) {
-    // Aggiorna budget senza mostrare ancora il risultato
+    const n = game.winning_number;
+
+    // Aggiorna budget dal DB (ufficiale)
     const { data } = await db.from('players').select('budget').eq('id', playerId).single();
     if (data) { budget = data.budget; updateBudgetDisplay(); }
-    // Salva il numero vincente per mostrarlo quando il relatore avvia il nuovo round
-    window._lastWinningNumber = game.winning_number;
-    document.getElementById('waiting-banner').textContent = '✅ Girata completata! Attendi il prossimo round…';
+
+    const myBets = [...bets.values()];
+    const won = myBets.some(b => betWins(b.type, b.value, n));
+
+    // Report puntate
+    let reportRows = '';
+    myBets.forEach(b => {
+      const w = betWins(b.type, b.value, n);
+      const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
+      const gain = w ? b.amount * mult : -b.amount;
+      reportRows += `<div class="report-row">
+        <span class="report-label">${betLabel(b.type, b.value)}</span>
+        <span class="report-result ${w ? 'win' : 'lose'}">${w ? '+' + centsToEuro(gain) : centsToEuro(gain)}</span>
+      </div>`;
+    });
+
+    const totalDelta = myBets.reduce((s, b) => {
+      const w = betWins(b.type, b.value, n);
+      const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
+      return s + (w ? b.amount * mult : -b.amount);
+    }, 0);
+
+    const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
+    const banner = document.getElementById('result-banner');
+    banner.style.display = 'block';
+    banner.className = 'result-banner ' + (won ? 'win' : (myBets.length > 0 ? 'lose' : 'neutral'));
+    banner.innerHTML = `
+      <div class="result-number">${color} ${n}</div>
+      <div class="result-label">Numero vincente</div>
+      ${reportRows ? `<div class="report-list">${reportRows}</div>` : ''}
+      ${myBets.length > 0 ? `<div class="result-outcome">${totalDelta >= 0 ? '🎉 +' + centsToEuro(totalDelta) : '😔 ' + centsToEuro(totalDelta)}</div>` : ''}
+      <div class="result-budget">Budget: <strong>${centsToEuro(budget)}</strong></div>`;
+
+    document.getElementById('waiting-banner').style.display = 'none';
+    setTimeout(() => resetForNextRound(), 6000);
   }
 
   if (game.status === 'waiting') {
-    // Aggiorna il budget dal DB (ora è ufficiale)
-    const { data } = await db.from('players').select('budget').eq('id', playerId).single();
-    if (data) { budget = data.budget; updateBudgetDisplay(); }
-
-    const n = window._lastWinningNumber;
-    if (n !== undefined && n !== null) {
-      const banner = document.getElementById('result-banner');
-      const myBets = [...bets.values()];
-      const won = myBets.some(b => betWins(b.type, b.value, n));
-      const totalStaked = myBets.reduce((s, b) => s + b.amount, 0);
-
-      // Costruisci il report delle puntate
-      let reportRows = '';
-      myBets.forEach(b => {
-        const w = betWins(b.type, b.value, n);
-        const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
-        const gain = w ? b.amount * mult : -b.amount;
-        reportRows += `<div class="report-row">
-          <span class="report-label">${betLabel(b.type, b.value)}</span>
-          <span class="report-result ${w ? 'win' : 'lose'}">${w ? '+' + centsToEuro(gain) : centsToEuro(gain)}</span>
-        </div>`;
-      });
-
-      const color = RED_NUMBERS.has(n) ? '🔴' : (n === 0 ? '🟢' : '⚫');
-      const totalDelta = myBets.reduce((s, b) => {
-        const w = betWins(b.type, b.value, n);
-        const mult = b.type === 'number' ? 35 : (b.type === 'dozen' ? 2 : 1);
-        return s + (w ? b.amount * mult : -b.amount);
-      }, 0);
-
-      banner.style.display = 'block';
-      banner.className = 'result-banner ' + (won ? 'win' : (myBets.length > 0 ? 'lose' : 'neutral'));
-      banner.innerHTML = `
-        <div class="result-number">${color} ${n}</div>
-        <div class="result-label">Numero vincente</div>
-        ${reportRows ? `<div class="report-list">${reportRows}</div>` : ''}
-        ${myBets.length > 0 ? `<div class="result-outcome">${totalDelta >= 0 ? '🎉 +' + centsToEuro(totalDelta) : '😔 ' + centsToEuro(totalDelta)}</div>` : ''}
-        <div class="result-budget">Budget attuale: <strong>${centsToEuro(budget)}</strong></div>`;
-
-      document.getElementById('waiting-banner').style.display = 'none';
-      window._lastWinningNumber = null;
-
-      // Dopo 6 secondi azzera e prepara il prossimo round
-      setTimeout(() => resetForNextRound(), 6000);
-    } else {
-      resetForNextRound();
-    }
+    resetForNextRound();
   }
 }
 
