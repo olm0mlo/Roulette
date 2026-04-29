@@ -848,7 +848,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 2. New player — fetch names list and pick an available one
   setStatus('Assegnazione nome…');
   try {
-    const res   = await fetch('nomi.json');
+    const res = await fetch('/Roulette/nomi.json');
     const names = await res.json();
 
     // Shuffle names for randomness
