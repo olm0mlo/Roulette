@@ -489,7 +489,7 @@
   <div class="bet-summary" id="bet-summary" style="display:none">
     <span class="bets-count" id="bets-count">0 puntate</span>
     <span class="bets-total" id="bets-total">€0,00 puntati</span>
-    <button class="btn-clear" onclick="clearBets()">Cancella tutto</button>
+    <button class="btn-clear" onclick="clearBets(true)">Cancella tutto</button>
   </div>
 
   <div class="section-title">Scegli dove puntare · tocca più volte per aumentare</div>
@@ -658,13 +658,14 @@ function decreaseBet(key) {
   renderBets();
 }
 
-function clearBets() {
+function clearBets(restoreBudget = false) {
+  // restoreBudget=true solo quando l'utente cancella manualmente prima di inviare
+  if (restoreBudget) {
+    bets.forEach(bet => { budget += bet.amount; });
+  }
   bets.forEach(bet => {
-    budget += bet.amount; // restituisce tutto
-  });
-  bets.forEach(bet => {
-    bet.element.classList.remove('selected');
-    const badge = bet.element.querySelector('.amount-badge');
+    bet.element && bet.element.classList.remove('selected');
+    const badge = bet.element && bet.element.querySelector('.amount-badge');
     if (badge) badge.remove();
   });
   bets.clear();
@@ -849,7 +850,7 @@ function resetForNextRound() {
   betsSent = false;
   sentBets = [];
   if (playerId) deleteCookie('roulette_sent_' + playerId);
-  clearBets();
+  clearBets(); // restoreBudget=false: budget already correct from DB
   document.querySelectorAll('.cell').forEach(c => c.style.cursor = 'pointer');
   document.getElementById('send-wrapper').style.display = 'block';
   document.getElementById('sent-message').style.display = 'none';
