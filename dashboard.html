@@ -84,9 +84,9 @@
   .left-panel { display: grid; grid-template-rows: auto 1fr; overflow: hidden; border-right: 1px solid var(--border); }
 
   /* ── CHART ── */
-  .chart-area { flex:1; padding:1rem 1.5rem; display:flex; flex-direction:column; overflow:hidden; }
-  .chart-title { font-size:0.68rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:0.75rem; }
-  #chart-canvas { width:100%; flex:1; }
+  .chart-area { flex:1; padding:1rem 1.5rem; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+  .chart-title { font-size:0.68rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:0.75rem; flex-shrink:0; }
+  .chart-wrap { flex:1; position:relative; min-height:0; }
 
   .controls-bar {
     background: var(--surface);
@@ -275,7 +275,7 @@
     </div>
     <div class="chart-area">
       <div class="chart-title">Bilancio per giocatore — round corrente</div>
-      <canvas id="chart-canvas"></canvas>
+      <div class="chart-wrap"><canvas id="chart-canvas"></canvas></div>
     </div>
   </div>
 
@@ -664,6 +664,8 @@ async function startSpin() {
   overlay.classList.add('active');
   spinNumber.classList.remove('visible');
   spinLabel.textContent = 'La ruota sta girando…';
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  // Chart stays visible until the next round result arrives
 
   // 1. Pick number
   const winningNumber = Math.floor(Math.random() * 37);
@@ -793,36 +795,49 @@ let chartInstance = null;
 function renderChart(winningNumber) {
   const canvas = document.getElementById('chart-canvas');
   if (!canvas) return;
+  // Ensure canvas fills its wrapper
+  const wrap = canvas.parentElement;
+  if (wrap) { canvas.style.width='100%'; canvas.style.height='100%'; }
 
-  // Build chart data: one polyline, each segment = one player
-  // X axis: cumulative amount staked, Y axis: cumulative delta (win/lose)
-  // Players sorted by ID (insertion order from DB)
   const sorted = [...allPlayers].sort((a, b) => a.id.localeCompare(b.id));
 
-  const points = [{ x: 0, y: 0 }]; // start at origin
+  const points = [{ x: 0, y: 0 }];
   let cumX = 0, cumY = 0;
+  const playersWithBets = [];
 
   sorted.forEach(player => {
     const playerBets = allBets.filter(b => b.player_id === player.id);
     if (playerBets.length === 0) return;
-
     const staked = playerBets.reduce((s, b) => s + b.amount, 0);
     const delta  = playerBets.reduce((s, b) => {
       const w = betWins(b.bet_type, b.bet_value, winningNumber);
       return s + (w ? b.amount * getMultiplier(b.bet_type) : -b.amount);
     }, 0);
-
-    cumX += staked / 100;  // convert cents to euros
+    cumX += staked / 100;
     cumY += delta  / 100;
     points.push({ x: cumX, y: cumY });
+    playersWithBets.push(player);
   });
 
-  // Destroy previous chart
+  if (points.length < 2) return; // no data yet
+
+  // Destroy old chart only when new data is ready — keeps previous round visible until then
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
-  // Color: green if last point positive, red if negative
   const lastY = points[points.length - 1]?.y ?? 0;
   const lineColor = lastY >= 0 ? '#3ecf5e' : '#ff6b5b';
+
+  // Compute axis bounds with generous padding so line is always well inside
+  const allY = points.map(p => p.y);
+  const maxY = Math.max(...allY, 0);
+  const minY = Math.min(...allY, 0);
+  const rangeY = maxY - minY || 1;
+  const padY = rangeY * 0.25;
+  const yMax = parseFloat((maxY + padY).toFixed(2));
+  const yMin = parseFloat((minY - padY).toFixed(2));
+
+  const maxX = cumX || 1;
+  const xMax = parseFloat((maxX * 1.08).toFixed(2));
 
   chartInstance = new Chart(canvas, {
     type: 'line',
@@ -832,8 +847,8 @@ function renderChart(winningNumber) {
         borderColor: lineColor,
         borderWidth: 2.5,
         pointBackgroundColor: lineColor,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointRadius: 5,
+        pointHoverRadius: 7,
         tension: 0,
         fill: false,
       }]
@@ -841,18 +856,24 @@ function renderChart(winningNumber) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 600, easing: 'easeInOutQuart' },
+      animation: { duration: 700, easing: 'easeInOutQuart' },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: 'rgba(10,15,10,0.9)',
+          borderColor: 'rgba(201,168,76,0.3)',
+          borderWidth: 1,
+          titleColor: '#c9a84c',
+          bodyColor: '#f0ebe0',
           callbacks: {
+            title: ctx => {
+              const idx = ctx[0].dataIndex;
+              if (idx === 0) return 'Partenza';
+              return playersWithBets[idx - 1]?.nickname ?? '?';
+            },
             label: ctx => {
-              const idx = ctx.dataIndex;
-              if (idx === 0) return 'Inizio';
-              const player = sorted.filter(p => allBets.some(b => b.player_id === p.id))[idx - 1];
-              const name = player ? player.nickname : '?';
               const y = ctx.parsed.y;
-              return `${name}: ${y >= 0 ? '+' : ''}€${y.toFixed(2)}`;
+              return `Bilancio cumulativo: ${y >= 0 ? '+' : ''}€${y.toFixed(2)}`;
             }
           }
         }
@@ -860,18 +881,25 @@ function renderChart(winningNumber) {
       scales: {
         x: {
           type: 'linear',
+          min: 0,
+          max: xMax,
           title: { display: true, text: 'Importo puntato (€)', color: '#7a9e82', font: { size: 11 } },
-          ticks: { color: '#7a9e82', font: { size: 10 } },
-          grid: { color: 'rgba(201,168,76,0.08)' },
+          ticks: { color: '#7a9e82', font: { size: 10 }, maxTicksLimit: 8 },
+          grid: { color: 'rgba(201,168,76,0.07)' },
         },
         y: {
+          min: yMin,
+          max: yMax,
           title: { display: true, text: 'Bilancio (€)', color: '#7a9e82', font: { size: 11 } },
           ticks: {
-            color: '#7a9e82', font: { size: 10 },
+            color: '#7a9e82', font: { size: 10 }, maxTicksLimit: 7,
             callback: v => (v >= 0 ? '+' : '') + '€' + v.toFixed(2)
           },
-          grid: { color: 'rgba(201,168,76,0.08)' },
-          zeroLineColor: 'rgba(201,168,76,0.3)',
+          grid: {
+            color: ctx => ctx.tick.value === 0
+              ? 'rgba(201,168,76,0.35)'
+              : 'rgba(201,168,76,0.07)'
+          },
         }
       }
     }
@@ -909,7 +937,7 @@ async function newRound() {
   allBets = [];
   renderBetsFeed();
   updateStats();
-  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  // Chart stays visible until next spin
 }
 
 async function confirmReset() {
